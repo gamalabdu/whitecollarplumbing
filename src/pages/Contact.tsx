@@ -1,4 +1,5 @@
-import type { FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import emailjs from "@emailjs/browser";
 import {
   Phone,
   Mail,
@@ -6,6 +7,8 @@ import {
   Clock,
   Send,
   MessageSquare,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,9 +55,40 @@ const contactInfo = [
 ];
 
 export function Contact() {
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    alert("Thank you! We'll be in touch within 2 business hours.");
+    if (!formRef.current) return;
+
+    setSending(true);
+    setError(null);
+
+    const fd = new FormData(formRef.current);
+
+    try {
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        {
+          name: `${fd.get("first_name")} ${fd.get("last_name")}`.trim(),
+          email: fd.get("email"),
+          phone: fd.get("phone") || "Not provided",
+          subject: fd.get("service") || "General inquiry",
+          message: fd.get("message"),
+          time: new Date().toLocaleString(),
+        },
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
+      );
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again or call us directly.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -123,87 +157,138 @@ export function Contact() {
               business hours with a detailed estimate.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="grid gap-5 sm:grid-cols-2">
+            {submitted ? (
+              <div className="mt-8 flex flex-col items-center justify-center rounded-lg border bg-muted/30 py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
+                <h3 className="text-2xl font-bold">Thank You!</h3>
+                <p className="mt-3 max-w-md text-muted-foreground">
+                  Your message has been sent successfully. We'll get back to you
+                  within 2 business hours.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-6"
+                  onClick={() => {
+                    setSubmitted(false);
+                    setError(null);
+                  }}
+                >
+                  Send Another Message
+                </Button>
+              </div>
+            ) : (
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                className="mt-8 space-y-5"
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="firstName"
+                      className="text-sm font-medium"
+                    >
+                      First Name
+                    </label>
+                    <Input
+                      id="firstName"
+                      name="first_name"
+                      placeholder="John"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="lastName"
+                      className="text-sm font-medium"
+                    >
+                      Last Name
+                    </label>
+                    <Input
+                      id="lastName"
+                      name="last_name"
+                      placeholder="Doe"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                      Email
+                    </label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="text-sm font-medium">
+                      Phone
+                    </label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="(555) 000-0000"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <label
-                    htmlFor="firstName"
-                    className="text-sm font-medium"
-                  >
-                    First Name
+                  <label htmlFor="service" className="text-sm font-medium">
+                    Service Needed
                   </label>
                   <Input
-                    id="firstName"
-                    placeholder="John"
+                    id="service"
+                    name="service"
+                    placeholder="e.g. Drain cleaning, water heater repair, bathroom remodel..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="message" className="text-sm font-medium">
+                    Message
+                  </label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    placeholder="Tell us about your plumbing needs, preferred timeline, or any questions you have..."
+                    rows={5}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="lastName"
-                    className="text-sm font-medium"
-                  >
-                    Last Name
-                  </label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    required
-                  />
-                </div>
-              </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="phone" className="text-sm font-medium">
-                    Phone
-                  </label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(555) 000-0000"
-                  />
-                </div>
-              </div>
+                {error && (
+                  <p className="text-sm text-destructive">{error}</p>
+                )}
 
-              <div className="space-y-2">
-                <label htmlFor="service" className="text-sm font-medium">
-                  Service Needed
-                </label>
-                <Input
-                  id="service"
-                  placeholder="e.g. Drain cleaning, water heater repair, bathroom remodel..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="message" className="text-sm font-medium">
-                  Message
-                </label>
-                <Textarea
-                  id="message"
-                  placeholder="Tell us about your plumbing needs, preferred timeline, or any questions you have..."
-                  rows={5}
-                  required
-                />
-              </div>
-
-              <Button type="submit" size="lg" className="w-full sm:w-auto">
-                <Send className="mr-2 h-4 w-4" />
-                Send Message
-              </Button>
-            </form>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={sending}
+                >
+                  {sending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
           </div>
 
           <div className="space-y-6 lg:col-span-2">
